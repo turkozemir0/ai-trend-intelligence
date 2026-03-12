@@ -13,7 +13,7 @@ export const metadata = pageMeta(
 export default async function ToolsPage({
   searchParams,
 }: {
-  searchParams: { category?: string };
+  searchParams: Promise<{ category?: string }>;
 }) {
   const supabase = await createServerSupabase();
   const params = await searchParams;

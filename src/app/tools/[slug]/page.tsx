@@ -23,7 +23,7 @@ export async function generateStaticParams() {
   return tools?.map((tool) => ({ slug: tool.slug })) || [];
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const supabase = await createServerSupabase();
   const { data: tool } = await supabase
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   );
 }
 
-export default async function ToolDetailPage({ params }: { params: { slug: string } }) {
+export default async function ToolDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const supabase = await createServerSupabase();
   const { data: tool } = await supabase
