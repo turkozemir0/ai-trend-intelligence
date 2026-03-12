@@ -1,5 +1,7 @@
 # AI Trend Intelligence
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone)
+
 Real-time AI ecosystem intelligence platform that aggregates signals from developer and discussion platforms and ranks AI tools by trend momentum.
 
 ## Features
