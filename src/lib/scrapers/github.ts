@@ -82,6 +82,23 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<number> {
     );
 
     if (!error) count++;
+
+    const { data: matchedTools } = await supabaseAdmin
+      .from("tools")
+      .select("id, github_url, name")
+      .or(`github_url.ilike.%${repo.fullName}%,name.ilike.%${repo.name}%`);
+
+    if (matchedTools && matchedTools.length > 0) {
+      for (const tool of matchedTools) {
+        await supabaseAdmin
+          .from("tools")
+          .update({
+            github_stars: repo.stars,
+            stars_weekly_delta: repo.starsToday,
+          })
+          .eq("id", tool.id);
+      }
+    }
   }
 
   return count;

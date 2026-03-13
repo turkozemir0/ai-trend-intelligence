@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Category } from "@/types";
 
 export default function SubmitPage() {
   const [formData, setFormData] = useState({
@@ -13,6 +14,25 @@ export default function SubmitPage() {
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch("/api/categories");
+        const data = await response.json();
+        if (data.data) {
+          setCategories(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,25 +131,15 @@ export default function SubmitPage() {
               required
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+              disabled={categoriesLoading}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a category</option>
-              <option value="coding">Coding</option>
-              <option value="marketing">Marketing</option>
-              <option value="writing">Writing</option>
-              <option value="design">Design</option>
-              <option value="productivity">Productivity</option>
-              <option value="research">Research</option>
-              <option value="video">Video</option>
-              <option value="audio">Audio</option>
-              <option value="sales">Sales</option>
-              <option value="support">Customer Support</option>
-              <option value="data-analysis">Data Analysis</option>
-              <option value="automation">Automation</option>
-              <option value="education">Education</option>
-              <option value="finance">Finance</option>
-              <option value="legal">Legal</option>
-              <option value="other">Other</option>
+              <option value="">{categoriesLoading ? "Loading categories..." : "Select a category"}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 

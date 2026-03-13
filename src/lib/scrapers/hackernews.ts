@@ -54,6 +54,10 @@ export async function scrapeHackerNews(): Promise<HNStory[]> {
 export async function saveHNSignals(stories: HNStory[]): Promise<number> {
   let count = 0;
 
+  const { data: allTools } = await supabaseAdmin
+    .from("tools")
+    .select("id, name, slug");
+
   for (const story of stories) {
     const { error } = await supabaseAdmin.from("signals").upsert(
       {
@@ -71,6 +75,26 @@ export async function saveHNSignals(stories: HNStory[]): Promise<number> {
     );
 
     if (!error) count++;
+
+    if (allTools) {
+      const storyTitleLower = story.title.toLowerCase();
+      for (const tool of allTools) {
+        if (storyTitleLower.includes(tool.name.toLowerCase())) {
+          const { data: currentTool } = await supabaseAdmin
+            .from("tools")
+            .select("hn_points")
+            .eq("id", tool.id)
+            .single();
+
+          const newHnPoints = (currentTool?.hn_points || 0) + story.score;
+
+          await supabaseAdmin
+            .from("tools")
+            .update({ hn_points: newHnPoints })
+            .eq("id", tool.id);
+        }
+      }
+    }
   }
 
   return count;

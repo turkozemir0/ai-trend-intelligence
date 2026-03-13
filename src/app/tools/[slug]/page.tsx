@@ -7,6 +7,8 @@ import Link from "next/link";
 import { ExternalLink, ArrowLeft } from "lucide-react";
 import { scoreColor, momentumEmoji, formatNumber } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import SignalCard from "@/components/signal-card";
+import ToolCard from "@/components/tool-card";
 
 export const revalidate = 3600;
 
@@ -35,9 +37,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!tool) return {};
 
+  const description = [
+    tool.short_description || tool.description,
+    tool.pricing_detail ? `Pricing: ${tool.pricing_detail}.` : null,
+    `Trend score: ${tool.trend_score}/10.`,
+    tool.category?.name ? `Category: ${tool.category.name}.` : null,
+  ].filter(Boolean).join(" ");
+
   return pageMeta(
     tool.name,
-    tool.short_description || tool.description || `Discover ${tool.name}`,
+    description,
     `/tools/${tool.slug}`
   );
 }
@@ -55,6 +64,22 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
   if (!tool) notFound();
 
   const typedTool = tool as Tool;
+
+  const { data: recentSignals } = await supabase
+    .from("signals")
+    .select("*")
+    .ilike("title", `%${typedTool.name}%`)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const { data: alternatives } = await supabase
+    .from("tools")
+    .select("*, category:categories(*)")
+    .eq("category_id", typedTool.category_id)
+    .eq("is_published", true)
+    .neq("id", typedTool.id)
+    .order("trend_score", { ascending: false })
+    .limit(3);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -77,6 +102,24 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
           {typedTool.description && (
             <p className="text-lg text-zinc-300 mb-6">{typedTool.description}</p>
           )}
+
+          <div className="grid grid-cols-2 gap-4 my-6">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+              <div className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Pricing</div>
+              <div className="font-semibold capitalize">{typedTool.pricing}</div>
+              {typedTool.pricing_detail && (
+                <div className="text-sm text-zinc-400 mt-1">{typedTool.pricing_detail}</div>
+              )}
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+              <div className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Category</div>
+              <div className="font-semibold">{typedTool.category?.name}</div>
+              <Link href={`/tools?category=${typedTool.category?.slug}`} className="text-sm text-emerald-400 hover:underline mt-1 block">
+                See all {typedTool.category?.name} tools →
+              </Link>
+            </div>
+          </div>
+
           {typedTool.website && (
             <Link
               href={typedTool.website}
@@ -124,8 +167,32 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
               </div>
             )}
           </div>
+
+          {alternatives && alternatives.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3">Similar Tools</h3>
+              <div className="space-y-2">
+                {alternatives.map((alt) => (
+                  <ToolCard key={alt.id} tool={alt as Tool} variant="compact" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">Recent Signals</h2>
+        {recentSignals && recentSignals.length > 0 ? (
+          <div className="space-y-3">
+            {recentSignals.map((signal) => (
+              <SignalCard key={signal.id} signal={signal} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-zinc-400">No recent signals found for {typedTool.name}.</p>
+        )}
+      </section>
 
       <Link
         href="/tools"
