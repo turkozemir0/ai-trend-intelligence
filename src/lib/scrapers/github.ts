@@ -17,6 +17,11 @@ interface GithubRepo {
   forks: number;
 }
 
+interface SaveSignalsResult {
+  count: number;
+  errors: string[];
+}
+
 export async function scrapeGithubTrending(): Promise<GithubRepo[]> {
   const response = await fetch("https://github.com/trending?since=weekly", {
     headers: {
@@ -62,8 +67,9 @@ export async function scrapeGithubTrending(): Promise<GithubRepo[]> {
   return repos;
 }
 
-export async function saveGithubSignals(repos: GithubRepo[]): Promise<number> {
+export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignalsResult> {
   let count = 0;
+  const errors: string[] = [];
 
   for (const repo of repos) {
     const { error } = await supabaseAdmin.from("signals").upsert(
@@ -81,7 +87,12 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<number> {
       { onConflict: "source,source_id" }
     );
 
-    if (!error) count++;
+    if (!error) {
+      count++;
+    } else {
+      errors.push(`signals upsert failed for ${repo.fullName}: ${error.message}`);
+      continue;
+    }
 
     const { data: matchedTools } = await supabaseAdmin
       .from("tools")
@@ -90,16 +101,20 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<number> {
 
     if (matchedTools && matchedTools.length > 0) {
       for (const tool of matchedTools) {
-        await supabaseAdmin
+        const { error: toolUpdateError } = await supabaseAdmin
           .from("tools")
           .update({
             github_stars: repo.stars,
             stars_weekly_delta: repo.starsToday,
           })
           .eq("id", tool.id);
+
+        if (toolUpdateError) {
+          errors.push(`tool update failed for ${tool.name}: ${toolUpdateError.message}`);
+        }
       }
     }
   }
 
-  return count;
+  return { count, errors };
 }

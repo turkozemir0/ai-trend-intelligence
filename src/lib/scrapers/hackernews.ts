@@ -14,6 +14,11 @@ interface HNStory {
   descendants: number;
 }
 
+interface SaveSignalsResult {
+  count: number;
+  errors: string[];
+}
+
 export async function scrapeHackerNews(): Promise<HNStory[]> {
   const topStoriesResponse = await fetch(
     "https://hacker-news.firebaseio.com/v0/topstories.json"
@@ -51,8 +56,9 @@ export async function scrapeHackerNews(): Promise<HNStory[]> {
   return aiStories;
 }
 
-export async function saveHNSignals(stories: HNStory[]): Promise<number> {
+export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResult> {
   let count = 0;
+  const errors: string[] = [];
 
   const { data: allTools } = await supabaseAdmin
     .from("tools")
@@ -74,7 +80,12 @@ export async function saveHNSignals(stories: HNStory[]): Promise<number> {
       { onConflict: "source,source_id" }
     );
 
-    if (!error) count++;
+    if (!error) {
+      count++;
+    } else {
+      errors.push(`signals upsert failed for story ${story.id}: ${error.message}`);
+      continue;
+    }
 
     if (allTools) {
       const storyTitleLower = story.title.toLowerCase();
@@ -88,14 +99,18 @@ export async function saveHNSignals(stories: HNStory[]): Promise<number> {
 
           const newHnPoints = (currentTool?.hn_points || 0) + story.score;
 
-          await supabaseAdmin
+          const { error: toolUpdateError } = await supabaseAdmin
             .from("tools")
             .update({ hn_points: newHnPoints })
             .eq("id", tool.id);
+
+          if (toolUpdateError) {
+            errors.push(`tool update failed for ${tool.name}: ${toolUpdateError.message}`);
+          }
         }
       }
     }
   }
 
-  return count;
+  return { count, errors };
 }

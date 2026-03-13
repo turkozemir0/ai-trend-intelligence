@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const githubRepos = await scrapeGithubTrending();
-    githubCount = await saveGithubSignals(githubRepos);
+    const githubResult = await saveGithubSignals(githubRepos);
+    githubCount = githubResult.count;
+    errors.push(...githubResult.errors.map((error) => `GitHub: ${error}`));
   } catch (error) {
     console.error("GitHub scraper error:", error);
     errors.push(`GitHub: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -29,7 +31,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const hnStories = await scrapeHackerNews();
-    hnCount = await saveHNSignals(hnStories);
+    const hnResult = await saveHNSignals(hnStories);
+    hnCount = hnResult.count;
+    errors.push(...hnResult.errors.map((error) => `HackerNews: ${error}`));
   } catch (error) {
     console.error("HN scraper error:", error);
     errors.push(`HackerNews: ${error instanceof Error ? error.message : "Unknown error"}`);
