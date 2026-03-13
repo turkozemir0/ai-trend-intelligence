@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { scrapeGithubTrending, saveGithubSignals } from "@/lib/scrapers/github";
 import { scrapeHackerNews, saveHNSignals } from "@/lib/scrapers/hackernews";
 import { recalculateTrendScores } from "@/lib/scoring";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,6 +13,28 @@ export async function GET(request: NextRequest) {
 
   if (authHeader !== expectedAuth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const startedAt = new Date().toISOString();
+  let runId: string | null = null;
+
+  try {
+    const { data: runData, error: runError } = await supabaseAdmin
+      .from("cron_runs")
+      .insert({
+        started_at: startedAt,
+        status: "running",
+      })
+      .select("id")
+      .single();
+
+    if (runError) {
+      console.error("Failed to create cron run log:", runError);
+    } else {
+      runId = runData?.id;
+    }
+  } catch (error) {
+    console.error("Cron run logging error:", error);
   }
 
   const errors: string[] = [];
@@ -46,12 +69,35 @@ export async function GET(request: NextRequest) {
     errors.push(`Scoring: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 
+  const finishedAt = new Date().toISOString();
+  const status = errors.length === 0 ? "success" : 
+                 (githubCount > 0 || hnCount > 0 || scoredCount > 0) ? "partial_failure" : "failed";
+
+  if (runId) {
+    try {
+      await supabaseAdmin
+        .from("cron_runs")
+        .update({
+          finished_at: finishedAt,
+          status,
+          github_count: githubCount,
+          hackernews_count: hnCount,
+          scored_count: scoredCount,
+          error_count: errors.length,
+          errors: errors,
+        })
+        .eq("id", runId);
+    } catch (error) {
+      console.error("Failed to update cron run log:", error);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     github: githubCount,
     hackernews: hnCount,
     scored: scoredCount,
     errors,
-    timestamp: new Date().toISOString(),
+    timestamp: finishedAt,
   });
 }

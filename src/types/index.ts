@@ -22,6 +22,12 @@ export interface Tool {
   created_at: string;
   updated_at: string;
   category?: Category;
+  signals_24h?: number;
+  signals_7d?: number;
+  github_delta_7d?: number;
+  hn_points_7d?: number;
+  trend_score_24h?: number;
+  trend_score_7d?: number;
 }
 
 export interface Category {
@@ -43,6 +49,10 @@ export interface Signal {
   score_delta: number;
   comments: number;
   created_at: string;
+  signal_type?: "release" | "discussion" | "tutorial" | "news" | "other" | null;
+  topic?: string | null;
+  sentiment?: "positive" | "neutral" | "negative" | null;
+  tool_id?: string | null;
 }
 
 export interface Submission {

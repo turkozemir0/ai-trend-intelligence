@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { findToolMatch } from "@/lib/matching";
 
 const AI_KEYWORDS = [
   "ai", "llm", "gpt", "agent", "ml", "transformer", "diffusion",
@@ -72,16 +73,26 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
   const errors: string[] = [];
 
   for (const repo of repos) {
+    if (!repo.name || !repo.fullName) {
+      errors.push(`Skipped repo with empty name or fullName`);
+      continue;
+    }
+
+    const normalizedUrl = repo.url && repo.url.startsWith("http") ? repo.url : null;
+    const normalizedStars = isNaN(repo.stars) ? 0 : repo.stars;
+    const normalizedStarsToday = isNaN(repo.starsToday) ? 0 : repo.starsToday;
+    const normalizedForks = isNaN(repo.forks) ? 0 : repo.forks;
+
     const { error } = await supabaseAdmin.from("signals").upsert(
       {
         source: "github",
         source_id: repo.fullName,
         title: repo.name,
-        url: repo.url,
-        description: repo.description,
-        score: repo.stars,
-        score_delta: repo.starsToday,
-        comments: repo.forks,
+        url: normalizedUrl,
+        description: repo.description || null,
+        score: normalizedStars,
+        score_delta: normalizedStarsToday,
+        comments: normalizedForks,
         raw_data: repo,
       },
       { onConflict: "source,source_id" }
@@ -94,24 +105,19 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
       continue;
     }
 
-    const { data: matchedTools } = await supabaseAdmin
-      .from("tools")
-      .select("id, github_url, name")
-      .or(`github_url.ilike.%${repo.fullName}%,name.ilike.%${repo.name}%`);
+    const matchedTool = await findToolMatch(repo.name, repo.fullName);
 
-    if (matchedTools && matchedTools.length > 0) {
-      for (const tool of matchedTools) {
-        const { error: toolUpdateError } = await supabaseAdmin
-          .from("tools")
-          .update({
-            github_stars: repo.stars,
-            stars_weekly_delta: repo.starsToday,
-          })
-          .eq("id", tool.id);
+    if (matchedTool) {
+      const { error: toolUpdateError } = await supabaseAdmin
+        .from("tools")
+        .update({
+          github_stars: repo.stars,
+          stars_weekly_delta: repo.starsToday,
+        })
+        .eq("id", matchedTool.id);
 
-        if (toolUpdateError) {
-          errors.push(`tool update failed for ${tool.name}: ${toolUpdateError.message}`);
-        }
+      if (toolUpdateError) {
+        errors.push(`tool update failed for ${matchedTool.name}: ${toolUpdateError.message}`);
       }
     }
   }

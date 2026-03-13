@@ -8,13 +8,19 @@ export default function Nav() {
           <span className="text-lg font-bold">AI Trend Intel</span>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
         </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/tools" className="text-zinc-300 hover:text-zinc-100 transition">
+        <div className="flex items-center gap-4 md:gap-6">
+          <Link href="/tools" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
             Tools
+          </Link>
+          <Link href="/docs" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
+            API
+          </Link>
+          <Link href="/pricing" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
+            Pricing
           </Link>
           <Link
             href="/submit"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-4 py-2 transition"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-2 md:px-4 transition text-sm md:text-base"
           >
             Submit
           </Link>
