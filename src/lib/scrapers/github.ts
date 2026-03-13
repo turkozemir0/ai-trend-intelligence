@@ -78,7 +78,7 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
       continue;
     }
 
-    const matchedTool = await findToolMatch(repo.name, repo.fullName);
+    const matchedTool = await findToolMatch(repo.name, repo.fullName, repo.url);
     const normalizedUrl = repo.url && repo.url.startsWith("http") ? repo.url : null;
     const normalizedStars = isNaN(repo.stars) ? 0 : repo.stars;
     const normalizedStarsToday = isNaN(repo.starsToday) ? 0 : repo.starsToday;

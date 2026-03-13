@@ -81,7 +81,7 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
         const toolNameLower = tool.name.toLowerCase();
 
         if (storyTitleLower.includes(toolNameLower)) {
-          const matchedTool = await findToolMatch(tool.name);
+          const matchedTool = await findToolMatch(tool.name, undefined, story.url);
           if (matchedTool) {
             matchedToolId = matchedTool.id;
             matchedToolName = matchedTool.name;

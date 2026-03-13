@@ -117,6 +117,22 @@ Validated recently:
 - `/api/v1/signals` works with API key
 - `/api/v1/trends` works with API key and returns summary
 
+## Backfill Status
+
+Backfill was executed against production data.
+
+Observed result:
+- scanned: 30 first pass, then 29 remaining
+- matched: 1
+- skipped: 28 to 29
+
+Interpretation:
+- the script is functioning
+- the low match rate is mostly due to current signals not referencing tracked tools
+- many recent HN/GitHub signals are general AI stories or repos outside the seeded 12-tool catalog
+
+This is primarily a catalog coverage / entity resolution issue, not a runtime failure.
+
 ## Recommended Next Steps
 
 ### P0
@@ -138,4 +154,3 @@ Validated recently:
 
 - `trends` endpoint may still return empty `data` for tools with no matched historical signals. That is currently data-state, not endpoint failure.
 - backfill script is intentionally conservative: GitHub URL match first, then title includes tool name.
-
