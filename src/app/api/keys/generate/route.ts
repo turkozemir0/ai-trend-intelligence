@@ -5,6 +5,13 @@ import { generateApiKey } from "@/lib/api-auth";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+
+  if (authHeader !== expectedAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { user_email, name, plan } = body;

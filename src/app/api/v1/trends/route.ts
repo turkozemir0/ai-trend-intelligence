@@ -13,6 +13,7 @@ interface ErrorResponse {
 interface TrendsResponse {
   data: any[];
   window: string;
+  summary?: Record<string, unknown>;
 }
 
 export async function GET(request: NextRequest) {
@@ -83,16 +84,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errorResponse, { status: 404 });
     }
 
-    const { data: signals } = await supabaseAdmin
+    const { data: directSignals } = await supabaseAdmin
       .from("signals")
-      .select("created_at, score, source")
-      .ilike("title", `%${tool.name}%`)
+      .select("created_at, score, source, title, tool_id")
+      .eq("tool_id", toolId)
       .gte("created_at", startDate.toISOString())
       .order("created_at", { ascending: true });
 
+    let signals = directSignals || [];
+
+    if (signals.length === 0) {
+      const { data: fallbackSignals } = await supabaseAdmin
+        .from("signals")
+        .select("created_at, score, source, title, tool_id")
+        .ilike("title", `%${tool.name}%`)
+        .gte("created_at", startDate.toISOString())
+        .order("created_at", { ascending: true });
+
+      signals = fallbackSignals || [];
+    }
+
     const response: TrendsResponse = {
-      data: signals || [],
+      data: signals,
       window,
+      summary: {
+        tool_id: tool.id,
+        tool_name: tool.name,
+        trend_score: tool.trend_score,
+        trend_score_24h: tool.trend_score_24h,
+        trend_score_7d: tool.trend_score_7d,
+        signals_24h: tool.signals_24h,
+        signals_7d: tool.signals_7d,
+        github_stars: tool.github_stars,
+        stars_weekly_delta: tool.stars_weekly_delta,
+        matched_signals: signals.length,
+      },
     };
 
     return NextResponse.json(response, {

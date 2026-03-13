@@ -78,6 +78,7 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
       continue;
     }
 
+    const matchedTool = await findToolMatch(repo.name, repo.fullName);
     const normalizedUrl = repo.url && repo.url.startsWith("http") ? repo.url : null;
     const normalizedStars = isNaN(repo.stars) ? 0 : repo.stars;
     const normalizedStarsToday = isNaN(repo.starsToday) ? 0 : repo.starsToday;
@@ -94,6 +95,7 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
         score_delta: normalizedStarsToday,
         comments: normalizedForks,
         raw_data: repo,
+        tool_id: matchedTool?.id || null,
       },
       { onConflict: "source,source_id" }
     );
@@ -104,8 +106,6 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
       errors.push(`signals upsert failed for ${repo.fullName}: ${error.message}`);
       continue;
     }
-
-    const matchedTool = await findToolMatch(repo.name, repo.fullName);
 
     if (matchedTool) {
       const { error: toolUpdateError } = await supabaseAdmin

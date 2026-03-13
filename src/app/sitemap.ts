@@ -1,7 +1,8 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { getBaseUrl } from "@/lib/seo-utils";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aitrendintel.com";
+const SITE_URL = getBaseUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createClient(

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
+import { getBaseUrl } from "@/lib/seo-utils";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aitrendintel.com";
+const SITE_URL = getBaseUrl();
 const SITE_NAME = "AI Trend Intelligence";
 
 export function pageMeta(title: string, description: string, path: string): Metadata {

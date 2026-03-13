@@ -71,6 +71,26 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
       continue;
     }
 
+    let matchedToolId: string | null = null;
+    let matchedToolName: string | null = null;
+
+    if (allTools) {
+      const storyTitleLower = story.title.toLowerCase();
+
+      for (const tool of allTools) {
+        const toolNameLower = tool.name.toLowerCase();
+
+        if (storyTitleLower.includes(toolNameLower)) {
+          const matchedTool = await findToolMatch(tool.name);
+          if (matchedTool) {
+            matchedToolId = matchedTool.id;
+            matchedToolName = matchedTool.name;
+          }
+          break;
+        }
+      }
+    }
+
     const normalizedUrl = story.url && story.url.startsWith("http") ? story.url : null;
     const normalizedScore = isNaN(story.score) ? 0 : story.score;
     const normalizedDescendants = isNaN(story.descendants) ? 0 : story.descendants;
@@ -86,6 +106,7 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
         score_delta: 0,
         comments: normalizedDescendants,
         raw_data: story,
+        tool_id: matchedToolId,
       },
       { onConflict: "source,source_id" }
     );
@@ -97,35 +118,22 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
       continue;
     }
 
-    if (allTools) {
-      const storyTitleLower = story.title.toLowerCase();
-      
-      for (const tool of allTools) {
-        const toolNameLower = tool.name.toLowerCase();
-        
-        if (storyTitleLower.includes(toolNameLower)) {
-          const matchedTool = await findToolMatch(tool.name);
-          
-          if (matchedTool) {
-            const { data: currentTool } = await supabaseAdmin
-              .from("tools")
-              .select("hn_points")
-              .eq("id", matchedTool.id)
-              .single();
+    if (matchedToolId) {
+      const { data: currentTool } = await supabaseAdmin
+        .from("tools")
+        .select("hn_points")
+        .eq("id", matchedToolId)
+        .single();
 
-            const newHnPoints = (currentTool?.hn_points || 0) + story.score;
+      const newHnPoints = (currentTool?.hn_points || 0) + story.score;
 
-            const { error: toolUpdateError } = await supabaseAdmin
-              .from("tools")
-              .update({ hn_points: newHnPoints })
-              .eq("id", matchedTool.id);
+      const { error: toolUpdateError } = await supabaseAdmin
+        .from("tools")
+        .update({ hn_points: newHnPoints })
+        .eq("id", matchedToolId);
 
-            if (toolUpdateError) {
-              errors.push(`tool update failed for ${matchedTool.name}: ${toolUpdateError.message}`);
-            }
-          }
-          break;
-        }
+      if (toolUpdateError) {
+        errors.push(`tool update failed for ${matchedToolName || matchedToolId}: ${toolUpdateError.message}`);
       }
     }
   }

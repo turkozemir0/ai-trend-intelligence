@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
+import { getBaseUrl } from "@/lib/seo-utils";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aitrendintel.com";
+const SITE_URL = getBaseUrl();
 
 export default function robots(): MetadataRoute.Robots {
   return {

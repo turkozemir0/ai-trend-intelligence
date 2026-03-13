@@ -1,6 +1,16 @@
 export function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+  if (
+    configuredUrl &&
+    !configuredUrl.includes("your-project-name") &&
+    !configuredUrl.includes("your-production-domain")
+  ) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   }
   
   if (process.env.VERCEL_URL) {
