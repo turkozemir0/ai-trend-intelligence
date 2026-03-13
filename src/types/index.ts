@@ -38,6 +38,31 @@ export interface Category {
   tool_count: number;
 }
 
+export interface CategoryMarketStats {
+  category: Category;
+  tool_count: number;
+  avg_trend_score: number;
+  avg_trend_score_24h: number;
+  avg_trend_score_7d: number;
+  signals_24h: number;
+  signals_7d: number;
+  rising_tools: number;
+  stable_tools: number;
+  declining_tools: number;
+  market_share: number;
+}
+
+export interface MarketOverview {
+  summary: {
+    total_tools: number;
+    active_categories: number;
+    total_signals_24h: number;
+    total_signals_7d: number;
+    leading_category_slug: string | null;
+  };
+  categories: CategoryMarketStats[];
+}
+
 export interface Signal {
   id: string;
   source: "github" | "hackernews" | "producthunt" | "reddit";

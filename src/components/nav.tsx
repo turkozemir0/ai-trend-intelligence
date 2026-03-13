@@ -12,6 +12,9 @@ export default function Nav() {
           <Link href="/tools" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
             Tools
           </Link>
+          <Link href="/market" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
+            Market
+          </Link>
           <Link href="/docs" className="text-zinc-300 hover:text-zinc-100 transition text-sm md:text-base">
             API
           </Link>
