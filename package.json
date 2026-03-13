@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "backfill:tool-ids": "node scripts/backfill-signal-tool-ids.mjs"
+    "backfill:tool-ids": "node scripts/backfill-signal-tool-ids.mjs",
+    "backfill:classification": "node scripts/backfill-signal-classification.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

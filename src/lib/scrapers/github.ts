@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { findToolMatch } from "@/lib/matching";
+import { classifySignal, shouldAttemptToolMatch } from "@/lib/classification";
 
 const AI_KEYWORDS = [
   "ai", "llm", "gpt", "agent", "ml", "transformer", "diffusion",
@@ -78,8 +79,22 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
       continue;
     }
 
-    const matchedTool = await findToolMatch(repo.name, repo.fullName, repo.url);
     const normalizedUrl = repo.url && repo.url.startsWith("http") ? repo.url : null;
+    
+    // Classify the signal
+    const classification = classifySignal(
+      repo.name,
+      repo.description,
+      "github",
+      normalizedUrl
+    );
+
+    // Only attempt tool matching for relevant entity types
+    let matchedTool = null;
+    if (shouldAttemptToolMatch(classification.entity_type)) {
+      matchedTool = await findToolMatch(repo.name, repo.fullName, repo.url);
+    }
+
     const normalizedStars = isNaN(repo.stars) ? 0 : repo.stars;
     const normalizedStarsToday = isNaN(repo.starsToday) ? 0 : repo.starsToday;
     const normalizedForks = isNaN(repo.forks) ? 0 : repo.forks;
@@ -96,6 +111,11 @@ export async function saveGithubSignals(repos: GithubRepo[]): Promise<SaveSignal
         comments: normalizedForks,
         raw_data: repo,
         tool_id: matchedTool?.id || null,
+        entity_type: classification.entity_type,
+        signal_type: classification.signal_type,
+        topic: classification.topic,
+        sentiment: classification.sentiment,
+        classification_confidence: classification.confidence,
       },
       { onConflict: "source,source_id" }
     );

@@ -74,9 +74,11 @@ export interface Signal {
   score_delta: number;
   comments: number;
   created_at: string;
-  signal_type?: "release" | "discussion" | "tutorial" | "news" | "other" | null;
-  topic?: string | null;
+  entity_type?: "tool" | "framework" | "model" | "company" | "research" | "ecosystem" | "tutorial" | "unknown" | null;
+  signal_type?: "release" | "discussion" | "tutorial" | "news" | "showcase" | "other" | null;
+  topic?: "llm" | "coding" | "image" | "video" | "audio" | "agents" | "rag" | "automation" | "infrastructure" | "research" | "general" | null;
   sentiment?: "positive" | "neutral" | "negative" | null;
+  classification_confidence?: number | null;
   tool_id?: string | null;
 }
 

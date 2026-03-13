@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { findToolMatch } from "@/lib/matching";
+import { classifySignal, shouldAttemptToolMatch } from "@/lib/classification";
 
 const AI_KEYWORDS = [
   "ai", "llm", "gpt", "agent", "ml", "transformer", "diffusion",
@@ -71,10 +72,21 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
       continue;
     }
 
+    const normalizedUrl = story.url && story.url.startsWith("http") ? story.url : null;
+    
+    // Classify the signal
+    const classification = classifySignal(
+      story.title,
+      null,
+      "hackernews",
+      normalizedUrl
+    );
+
     let matchedToolId: string | null = null;
     let matchedToolName: string | null = null;
 
-    if (allTools) {
+    // Only attempt tool matching for relevant entity types
+    if (shouldAttemptToolMatch(classification.entity_type) && allTools) {
       const storyTitleLower = story.title.toLowerCase();
 
       for (const tool of allTools) {
@@ -91,7 +103,6 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
       }
     }
 
-    const normalizedUrl = story.url && story.url.startsWith("http") ? story.url : null;
     const normalizedScore = isNaN(story.score) ? 0 : story.score;
     const normalizedDescendants = isNaN(story.descendants) ? 0 : story.descendants;
 
@@ -107,6 +118,11 @@ export async function saveHNSignals(stories: HNStory[]): Promise<SaveSignalsResu
         comments: normalizedDescendants,
         raw_data: story,
         tool_id: matchedToolId,
+        entity_type: classification.entity_type,
+        signal_type: classification.signal_type,
+        topic: classification.topic,
+        sentiment: classification.sentiment,
+        classification_confidence: classification.confidence,
       },
       { onConflict: "source,source_id" }
     );
