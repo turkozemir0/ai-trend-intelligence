@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { validateApiKey } from "@/lib/api-auth";
+import { checkRateLimit, logApiUsage } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,7 @@ interface TrendsResponse {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   const apiKeyData = await validateApiKey(request);
 
   if (!apiKeyData) {
@@ -26,6 +28,34 @@ export async function GET(request: NextRequest) {
       message: "Invalid or missing API key",
     };
     return NextResponse.json(errorResponse, { status: 401 });
+  }
+
+  const rateLimit = await checkRateLimit(apiKeyData);
+
+  if (!rateLimit.allowed) {
+    const errorResponse: ErrorResponse = {
+      error: "rate_limit_exceeded",
+      code: "RATE_LIMIT_EXCEEDED",
+      message: `Rate limit exceeded. Limit: ${rateLimit.limit} requests per day.`,
+    };
+
+    await logApiUsage(
+      apiKeyData.id,
+      "/api/v1/trends",
+      "GET",
+      429,
+      Date.now() - startTime,
+      request.headers.get("user-agent"),
+      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip")
+    );
+
+    return NextResponse.json(errorResponse, {
+      status: 429,
+      headers: {
+        "X-RateLimit-Limit": String(rateLimit.limit),
+        "X-RateLimit-Remaining": String(rateLimit.remaining),
+      },
+    });
   }
 
   try {
@@ -76,6 +106,16 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (!tool) {
+      await logApiUsage(
+        apiKeyData.id,
+        "/api/v1/trends",
+        "GET",
+        404,
+        Date.now() - startTime,
+        request.headers.get("user-agent"),
+        request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip")
+      );
+
       const errorResponse: ErrorResponse = {
         error: "not_found",
         code: "TOOL_NOT_FOUND",
@@ -121,13 +161,35 @@ export async function GET(request: NextRequest) {
       },
     };
 
+    await logApiUsage(
+      apiKeyData.id,
+      "/api/v1/trends",
+      "GET",
+      200,
+      Date.now() - startTime,
+      request.headers.get("user-agent"),
+      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip")
+    );
+
     return NextResponse.json(response, {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "X-RateLimit-Limit": String(rateLimit.limit),
+        "X-RateLimit-Remaining": String(rateLimit.remaining - 1),
       },
     });
   } catch (error) {
+    await logApiUsage(
+      apiKeyData.id,
+      "/api/v1/trends",
+      "GET",
+      500,
+      Date.now() - startTime,
+      request.headers.get("user-agent"),
+      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip")
+    );
+
     const errorResponse: ErrorResponse = {
       error: "internal_error",
       code: "INTERNAL_SERVER_ERROR",

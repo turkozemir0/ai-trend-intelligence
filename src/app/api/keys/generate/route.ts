@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generateApiKey } from "@/lib/api-auth";
+import { isAdminAuthorized } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-
-  if (authHeader !== expectedAuth) {
+  if (!isAdminAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getBaseUrl } from "@/lib/seo-utils";
+import { isAdminAuthorized } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-
-  if (authHeader !== expectedAuth) {
+  if (!isAdminAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,6 +16,7 @@ export async function GET(request: NextRequest) {
       supabase_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       service_role_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       cron_secret: !!process.env.CRON_SECRET,
+      admin_secret: !!process.env.ADMIN_SECRET,
       site_url: getBaseUrl(),
     },
     data: {},
